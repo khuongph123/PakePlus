@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê Tổng hợp</title>
+    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body { background: #f7fafd; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .container { max-width: 98vw; margin: 18px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0, 2, 8, 0.08); padding: 24px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h2 { font-size: 22px; color: #1b3a7a; margin-bottom: 12px; text-transform: uppercase; }
+        .date-row { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; }
+        .date-row label { font-size: 16px; font-weight: bold; margin-right: 8px; color: #1b3a7a; }
+        .date-row input[type="date"] { font-size: 16px; padding: 6px 12px; border-radius: 6px; border: 1px solid #aaa; }
+        .actions { display: flex; justify-content: center; gap: 14px; margin: 22px 0 10px 0; flex-wrap: wrap; }
+        .btn { border: none; border-radius: 6px; padding: 10px 20px; font-size: 15px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: 0.18s; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        .btn-add { background: linear-gradient(90deg,#00b09b,#96c93d); }
+        .btn-save { background: linear-gradient(90deg,#43e97b,#38f9d7); }
+        .btn-view { background: linear-gradient(90deg,#2193b0,#6dd5ed); }
+        .btn-reset { background: linear-gradient(90deg,#ff5858,#f09819); }
+        .btn-export { background: linear-gradient(90deg,#84fab0,#8fd3f4); }
+        .btn-small { font-size:11px; padding:4px 8px; border-radius:5px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        .table-container { overflow-x: auto; border: 1px solid #ccc; }
+        table { border-collapse: collapse; background: white; width: 100%; table-layout: fixed; font-size: 9px; }
+        th, td { border: 1px solid #000; padding: 3px; text-align: center; vertical-align: middle; word-wrap: break-word; }
+        thead th { background: #e3eeff; color: #1b3a7a; font-weight: bold; }
+        tbody tr:hover { background-color: #eff6ff; }
+        .row-number { font-weight: bold; background: #e7f1ff; }
+        .input-cell input { width: 100%; box-sizing: border-box; border: none; background: transparent; text-align: center; font-size: 9px; padding: 3px; }
+        .input-cell input:focus { background: #e3f2fd; outline: 2px solid #2196F3; }
+        .input-cell input[readonly] { background-color: #f3f3f3; font-weight: bold; color: #1b3a7a; }
+        .delete-row-btn { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 10px; }
+
+        .archive-section, .aggregate-section { width: 80%; margin-left: auto; margin-right: auto; margin-top: 16px; background: #f6fafd; border-radius: 8px; padding: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .section-title { font-size: 18px; font-weight: bold; color: #1976d2; margin-bottom: 12px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+        .archive-list-wrap { max-height: 150px; overflow-y: auto; border-radius:4px; border:1px solid #c2d1e0; background: #fff; }
+        .archive-list { width: 100%; font-size: 13px; table-layout: auto; }
+        .archive-list tr td { padding: 8px 6px; border-bottom: 1px solid #eee; }
+        .archive-list tr:last-child td { border-bottom: none; }
+        .archive-row-actions { display: flex; gap: 4px; justify-content: flex-end; }
+        .agg-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; justify-content: center; }
+        /* CHANGED: Cỡ chữ của ô nhập ngày được tăng lên */
+        .agg-search-row input[type="date"] { font-size: 16px; padding: 8px 12px; border-radius: 4px; border: 1px solid #aaa; }
+        
+        .agg-results-list { max-height: 150px; overflow-y: auto; background: #fff; border-radius: 4px; border:1px solid #c2d1e0; font-size:13px; }
+        .agg-checkbox { transform: scale(1.2); margin-right: 8px; vertical-align: middle; }
+        .agg-table-wrap { margin-top: 15px; }
+		/* --- BẮT ĐẦU MÃ MỚI --- */
+
+/* Tăng cỡ chữ cho các nhãn "Từ ngày:", "Đến ngày:" */
+.agg-search-row label {
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+/* Tăng cỡ chữ cho các ô nhập ngày */
+.agg-search-row input {
+    font-size: 16px;
+    padding: 8px;
+}
+
+/* Tăng cỡ chữ cho danh sách ngày tháng kết quả tìm kiếm */
+.agg-results-list td,
+.agg-results-list-table td {
+    font-size: 16px;
+    padding: 8px;
+    vertical-align: middle;
+}
+
+/* Tăng kích thước ô check cho cân đối */
+.agg-checkbox {
+    transform: scale(1.4);
+}
+
+/* --- KẾT THÚC MÃ MỚI --- */
+    </style>
+</head>
+<body>
+<a href="dashboard.html" style="display: inline-block; padding: 10px 20px; margin: 20px; font-size: 1rem; font-weight: 700; color: white; background-color: #6c757d; border-radius: 8px; text-decoration: none;">⬅️ Quay lại Dashboard</a>
+<div class="container">
+    <div class="header">
+        <h2>Bảng Thống kê Tổng hợp</h2>
+    </div>
+    <div class="date-row">
+        <label for="date">Ngày báo cáo:</label>
+        <input type="date" id="date" required>
+    </div>
+
+    <div class="table-container">
+        <table id="main-table">
+             <colgroup>
+                <col style="width: 2%;"> <col style="width: 4%;">   <col style="width: 2.5%;"> <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 3%;"> <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 3%;"> <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;">   <col style="width: 2.5%;"> <col style="width: 2.5%;"> <col style="width: 2.5%;"> <col style="width: 2.5%;"> <col style="width: 2.5%;"> <col style="width: 2.5%;"> </colgroup>
+            <thead>
+                <tr>
+                    <th rowspan="4">TT</th><th colspan="12">Tình hình công tác LLLL</th><th colspan="10">Công tác nghiệp vụ có yêu cầu KKKK</th><th colspan="6">Kế hoạch TS liên hoàn</th>
+                </tr>
+                <tr>
+                    <th rowspan="3">Loại</th><th rowspan="3">Tổng số</th><th rowspan="3">Sinh hoạt, tiếp xúc</th><th colspan="9">Phục vụ yêu cầu</th>
+                    <th rowspan="3">Công tác nghiệp vụ</th><th colspan="9">Biện pháp kỹ thuật máy tính</th><th colspan="2">GS đối tượng qua PTNN</th>
+                    <th colspan="2">Kiểm tra</th><th colspan="2">Theo dõi đối tượng</th>
+                </tr>
+                <tr>
+                    <th rowspan="2">GS VTĐ</th><th rowspan="2">GS viễn trường</th><th rowspan="2">GS vệ tinh</th><th colspan="2">GS đối tượng qua PTNN và KKKK</th>
+                    <th rowspan="2">GS đối tượng qua BCC</th><th rowspan="2">Mã thám</th><th colspan="2">PCTTBMNN và CATTVTĐ</th>
+                    <th rowspan="2">GS VTĐ</th><th rowspan="2">GS viễn trường</th><th rowspan="2">GS vệ tinh</th><th colspan="2">GS đối tượng qua PTNN và KKKK</th>
+                    <th rowspan="2">GS đối tượng qua BCC</th><th rowspan="2">Mã thám</th><th colspan="2">PCTTBMNN và CATTVTĐ</th>
+                    <th rowspan="2">ĐTH</th><th rowspan="2">CT HĐ</th><th rowspan="2">ĐTH</th><th rowspan="2">CT HĐ</th><th rowspan="2">ĐTH</th><th rowspan="2">CT HĐ</th>
+                </tr>
+                <tr>
+                    <th>PCT TBMNN</th><th>CAT TVTĐ</th><th>PCTTBMNN</th><th>CATTVTĐ</th><th>PCT TBMNN</th><th>CAT TVTĐ</th><th>PCT TBMNN</th><th>CATT VTĐ</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-add" onclick="addNewRow()"><span>➕</span> Thêm dòng</button>
+        <button class="btn btn-save" onclick="saveData()"><span>💾</span> Lưu</button>
+        <button class="btn btn-reset" onclick="resetForm()"><span>🗑️</span> Làm mới</button>
+        <button class="btn btn-export" onclick="exportMainWord()"><span>📄</span> Xuất Word</button>
+    </div>
+
+    <div class="archive-section">
+        <div class="section-title">Dữ liệu đã lưu trữ</div>
+        <div class="archive-list-wrap">
+          <table class="archive-list" id="archive-list"></table>
+        </div>
+    </div>
+      
+    <div class="aggregate-section">
+        <div class="section-title">Tổng hợp số liệu</div>
+        <div class="agg-search-row">
+          <label>Từ ngày:</label>
+          <input type="date" id="agg-date-from">
+          <label>Đến ngày:</label>
+          <input type="date" id="agg-date-to">
+          <button class="btn btn-view" onclick="searchByDateRange()">Tìm kiếm</button>
+        </div>
+        <div class="agg-results-list" id="agg-results"></div>
+        <div style="text-align: center; margin-top: 10px;">
+            <button class="btn btn-save" onclick="aggregateSelected()">Tổng hợp các mục đã chọn</button>
+        </div>
+        <div class="agg-table-wrap" id="agg-table-wrap"></div>
+    </div>
+
+</div>
+
+<script>
+const NUM_DATA_COLS = 28;
+const STORAGE_PREFIX = 'tonghop_';
+
+const initialData = [
+    ['CTV', '', '', '', '', '', '', '', '', '', '', '', 'CA', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['CCBM', '', '', '', '', '', '', '', '', '', '', '', 'KTNV', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['HBBM', '', '', '', '', '', '', '', '', '', '', '', 'QLNV', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['ĐBBM', '', '', '', '', '', '', '', '', '', '', '', 'Xác minh hiềm nghi', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', '', '', '', '', '', 'Liên quan ANQG', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', '', '', '', '', '', 'Đối tượng khác', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', '', '', '', '', '', 'Sưu tra', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+];
+
+const fixedLabels = new Set(initialData.map(row => row[0]).filter(Boolean));
+initialData.forEach(row => {
+    if (row[12]) fixedLabels.add(row[12]);
+});
+
+// CHANGED: Hàm helper để ẩn số 0
+function formatAsNumberOrBlank(value) {
+    if (value === null || value === undefined || value === '') return '';
+    const num = Number(value);
+    if (!isNaN(num) && num === 0) {
+        return ''; // Là số 0, trả về rỗng
+    }
+    return value; // Là chữ hoặc số khác 0, giữ nguyên
+}
+
+function renderTable(data = []) {
+    const tableBody = document.getElementById('table-body');
+    tableBody.innerHTML = '';
+    const dataToRender = (data && data.length > 0) ? data : initialData;
+    dataToRender.forEach((rowData, index) => addNewRow(false, rowData, index + 1));
+}
+
+function addNewRow(recalc = true, rowData = null, rowNum) {
+    const tableBody = document.getElementById('table-body');
+    const newRow = document.createElement('tr');
+    
+    const current_row_num = rowNum || tableBody.rows.length + 1;
+    const isFixedRow = rowData && (fixedLabels.has(rowData[0]) || fixedLabels.has(rowData[12]));
+    
+    let rowHtml = `<td class="row-number">${current_row_num} ${!isFixedRow ? '<button class="delete-row-btn" onclick="deleteCurrentRow(this)">X</button>' : ''}</td>`;
+    
+    for (let i = 0; i < NUM_DATA_COLS; i++) {
+        const value = rowData ? rowData[i] : '';
+        const isLabelCell = isFixedRow && (i === 0 || i === 12);
+        const readonlyAttr = isLabelCell ? 'readonly' : '';
+        rowHtml += `<td class="input-cell"><input type="text" value="${value}" ${readonlyAttr} /></td>`;
+    }
+    newRow.innerHTML = rowHtml;
+    tableBody.appendChild(newRow);
+}
+
+function updateRowNumbers() {
+    document.querySelectorAll('#table-body tr').forEach((row, index) => {
+        const cell = row.querySelector('.row-number');
+        if (cell) cell.firstChild.textContent = `${index + 1} `;
+    });
+}
+
+function deleteCurrentRow(button) {
+    if (confirm('Bạn có chắc muốn xóa dòng này?')) {
+        button.closest('tr').remove();
+        updateRowNumbers();
+    }
+}
+
+function resetForm() {
+    if (confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu và quay về bảng ban đầu?')) {
+        renderTable([]);
+    }
+}
+
+function saveData() {
+    const date = document.getElementById('date').value;
+    if (!date) return alert('Vui lòng nhập ngày báo cáo!');
+    
+    let data = [];
+    document.querySelectorAll('#table-body tr').forEach(row => {
+        const rowData = Array.from(row.querySelectorAll('input')).map(input => input.value);
+        if (rowData.some(cell => cell.trim() !== '')) { // Chỉ lưu dòng có dữ liệu
+            data.push(rowData);
+        }
+    });
+    localStorage.setItem(STORAGE_PREFIX + date, JSON.stringify(data));
+    alert('Đã lưu dữ liệu cho ngày ' + formatDate(date));
+    updateArchiveList();
+}
+
+function loadData(date) {
+    let data = localStorage.getItem(STORAGE_PREFIX + date);
+    if (!data) {
+        renderTable([]); 
+        return;
+    }
+    document.getElementById('date').value = date;
+    renderTable(JSON.parse(data));
+}
+
+function updateArchiveList() {
+    const tbl = document.getElementById('archive-list');
+    tbl.innerHTML = ''; // Xóa nội dung cũ
+    let arr = [];
+    for(let i=0; i<localStorage.length; i++) {
+        let k = localStorage.key(i);
+        if(k.startsWith(STORAGE_PREFIX)) arr.push(k.replace(STORAGE_PREFIX,''));
+    }
+    arr.sort((a,b)=>b.localeCompare(a));
+    
+    if (arr.length > 0) {
+        arr.forEach(d => {
+            const row = tbl.insertRow();
+            row.innerHTML = `<td>${formatDate(d)}</td>
+            <td>
+                <div class="archive-row-actions">
+                    <button class="btn btn-view btn-small" onclick="loadData('${d}')">👁️</button>
+                    <button class="btn btn-reset btn-small" style="background: #c0392b" onclick="deleteData('${d}')">🗑️</button>
+                </div>
+            </td>`;
+        });
+    } else {
+        tbl.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#888;">Chưa có dữ liệu nào.</td></tr>';
+    }
+}
+
+function deleteData(date) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn báo cáo ngày ${formatDate(date)}?`)) return;
+    localStorage.removeItem(STORAGE_PREFIX + date);
+    updateArchiveList();
+    if (document.getElementById('date').value === date) {
+        resetForm();
+    }
+    alert('Đã xóa báo cáo.');
+}
+
+function formatDate(d) {
+    if(!d) return '';
+    const [y,m,day] = d.split('-');
+    return `${day}/${m}/${y}`;
+}
+
+function prepareTableForExport(originalTable) {
+    const tableClone = originalTable.cloneNode(true);
+    tableClone.querySelectorAll('input').forEach(input => {
+        const parentTd = input.parentElement;
+        // CHANGED: Ẩn số 0 khi xuất word
+        parentTd.innerText = formatAsNumberOrBlank(input.value);
+    });
+    tableClone.querySelectorAll('.delete-row-btn').forEach(btn => btn.remove());
+    tableClone.querySelectorAll('.row-number').forEach((cell, index) => {
+        cell.innerText = index + 1;
+    });
+    return tableClone;
+}
+
+function generateWordHtml(tableContent, title, subTitle) {
+    let css = `@page WordSection1 { size: A3 landscape; margin:0.5in; } div.WordSection1 { page: WordSection1; } table { border-collapse: collapse; width:100%; font-size:7pt; table-layout: fixed; } th,td { border:1px solid #000; padding:2px; text-align:center; vertical-align:middle; word-wrap: break-word; } h1, h2 { text-align:center; font-family:'Times New Roman', Times, serif; margin: 5px 0; } h1 {font-size: 14pt; font-weight:bold;} h2 {font-size: 12pt;} th { background-color: #ffffff !important; color: #000000 !important; font-weight: bold; }`;
+    const signatureHtml = `<table style="width:100%; border:none; margin-top:40px; font-size:12pt; font-weight:bold; font-family:'Times New Roman', Times, serif;"><tr><td style="width:50%; text-align:center; border:none;">LÃNH ĐẠO PHÊ DUYỆT</td><td style="width:50%; text-align:center; border:none;">CÁN BỘ THỐNG KÊ</td></tr></table>`;
+    let html = `<html><head><meta charset="utf-8"><style>${css}</style></head><body><div class="WordSection1"><h1>${title}</h1><h2>${subTitle}</h2>${tableContent}${signatureHtml}</div></body></html>`;
+    return html;
+}
+
+function exportMainWord() {
+    const tableForExport = prepareTableForExport(document.getElementById('main-table'));
+    const date = document.getElementById('date').value;
+    const title = 'BẢNG THỐNG KÊ TỔNG HỢP';
+    const subTitle = date ? `(Ngày ${formatDate(date)})` : '';
+    const htmlContent = generateWordHtml(tableForExport.outerHTML, title, subTitle);
+    saveAs(new Blob(['\ufeff', htmlContent], {type: 'application/msword'}), `ThongKe_TongHop_${date || 'Moi'}.doc`);
+}
+
+function searchByDateRange() {
+    document.getElementById('agg-table-wrap').innerHTML = '';
+    const fromDate = document.getElementById('agg-date-from').value;
+    const toDate = document.getElementById('agg-date-to').value;
+    if (!fromDate || !toDate) return alert('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc!');
+    if (fromDate > toDate) return alert('Ngày bắt đầu không được lớn hơn ngày kết thúc!');
+    let arr = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if (key.startsWith(STORAGE_PREFIX)) {
+            let reportDate = key.replace(STORAGE_PREFIX, '');
+            if (reportDate >= fromDate && reportDate <= toDate) arr.push(reportDate);
+        }
+    }
+    arr.sort((a, b) => b.localeCompare(a));
+    let html = (arr.length > 0) ? '<form id="agg-form"><table style="width:100%; table-layout: auto;">' : `<div style="color:#888;padding:4px; text-align:center;">Không có dữ liệu từ ${formatDate(fromDate)} đến ${formatDate(toDate)}.</div>`;
+    if (arr.length > 0) {
+        arr.forEach(d => {
+            html += `<tr><td><input class="agg-checkbox" type="checkbox" name="agg" value="${d}" checked></td><td>${formatDate(d)}</td></tr>`;
+        });
+        html += '</table></form>';
+    }
+    document.getElementById('agg-results').innerHTML = html;
+}
+
+function aggregateSelected() {
+    const form = document.getElementById('agg-form');
+    if(!form) return alert('Vui lòng tìm kiếm theo ngày trước!');
+    const checked = Array.from(form.elements['agg']).filter(e=>e.checked).map(e=>e.value);
+    if(checked.length===0) return alert('Vui lòng chọn ít nhất 1 báo cáo để tổng hợp!');
+    
+    const mergedData = new Map();
+    const textColumns = [0, 12]; 
+
+    checked.forEach(date => {
+        let data = JSON.parse(localStorage.getItem(STORAGE_PREFIX + date) || '[]');
+        data.forEach(rowData => {
+            const unitName = rowData[0] || rowData[12];
+            if (!unitName) return;
+
+            if (mergedData.has(unitName)) {
+                const existingData = mergedData.get(unitName);
+                for (let i = 1; i < rowData.length; i++) {
+                    if (!textColumns.includes(i)) {
+                        existingData[i] = (parseFloat(existingData[i]) || 0) + (parseFloat(rowData[i]) || 0);
+                    }
+                }
+            } else {
+                let initialRow = [...rowData];
+                 for (let i = 1; i < initialRow.length; i++) {
+                    if (!textColumns.includes(i)) {
+                       initialRow[i] = parseFloat(initialRow[i]) || 0;
+                    }
+                }
+                mergedData.set(unitName, initialRow);
+            }
+        });
+    });
+
+    let aggData = Array.from(mergedData.values());
+    aggData.sort((a, b) => {
+        const orderA = initialData.findIndex(row => row[0] === a[0] || row[12] === a[12]);
+        const orderB = initialData.findIndex(row => row[0] === b[0] || row[12] === b[12]);
+        if (orderA === -1) return 1;
+        if (orderB === -1) return -1;
+        return orderA - orderB;
+    });
+
+    const aggTable = document.getElementById('main-table').cloneNode(true);
+    aggTable.id = 'agg-table';
+    aggTable.querySelectorAll('input, .delete-row-btn').forEach(el => el.remove());
+    const aggBody = aggTable.querySelector('tbody');
+    aggBody.innerHTML = '';
+    
+    aggData.forEach((rowData, index) => {
+        let tr = document.createElement('tr');
+        // CHANGED: Ẩn số 0 trong bảng tổng hợp
+        tr.innerHTML = `<td class="row-number">${index + 1}</td>${rowData.map(cellData => `<td>${formatAsNumberOrBlank(cellData)}</td>`).join('')}`;
+        aggBody.appendChild(tr);
+    });
+    
+    const exportButtonHtml = `<div style="margin-top: 15px; text-align: center;"><button class="btn btn-export" onclick="exportAggregatedWord()"><span>📄</span> Xuất Word Tổng Hợp</button></div>`;
+    document.getElementById('agg-table-wrap').innerHTML = `<h4 style="color: #1976d2; text-align: center;">Kết quả tổng hợp từ ${checked.length} báo cáo</h4>${aggTable.outerHTML}${exportButtonHtml}`;
+}
+
+function exportAggregatedWord() {
+    const table = document.getElementById('agg-table');
+    if (!table) return alert('Không có dữ liệu tổng hợp để xuất!');
+    const fromDate = document.getElementById('agg-date-from').value;
+    const toDate = document.getElementById('agg-date-to').value;
+    const title = 'BẢNG THỐNG KÊ TỔNG HỢP';
+    const subTitle = (fromDate && toDate) ? `(Từ ngày ${formatDate(fromDate)} đến ngày ${formatDate(toDate)})` : '(Tổng hợp)';
+    const htmlContent = generateWordHtml(table.outerHTML, title, subTitle);
+    const fileName = `TongHop_NV_${fromDate}_den_${toDate}.doc`;
+    saveAs(new Blob(['\ufeff', htmlContent], {type: 'application/msword'}), fileName);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
+    renderTable();
+    updateArchiveList();
+});
+</script>
+</body>
+</html>
