@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thống kê ĐTCB</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    body { background: #f7fafd; font-family: 'Segoe UI',sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 1200px; margin: 18px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0, 2, 8, 0.08); padding: 24px; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h2 { font-size: 22px; color: #1b3a7a; margin-bottom: 12px; text-transform: uppercase; }
+    .date-row { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+    .date-row label, .agg-search-row label { font-size: 16px; font-weight: bold; margin-right: 8px; color: #1b3a7a; }
+    /* CHANGED: Tăng cỡ chữ các ô nhập ngày */
+    .date-row input[type="date"], .agg-search-row input[type="date"] { font-size: 18px; padding: 6px 12px; border-radius: 6px; border: 1px solid #aaa; }
+    .actions { display: flex; justify-content: center; gap: 14px; margin: 22px 0 10px 0; flex-wrap: wrap; }
+    .btn { border: none; border-radius: 6px; padding: 10px 20px; font-size: 15px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: 0.18s; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+    .btn-save { background: linear-gradient(90deg,#43e97b,#38f9d7); }
+    .btn-view { background: linear-gradient(90deg,#2193b0,#6dd5ed); }
+    .btn-reset { background: linear-gradient(90deg,#ff5858,#f09819); }
+    .btn-export { background: linear-gradient(90deg,#fc6076,#ff9a44); }
+    .btn-aggregate { background: linear-gradient(90deg, #8E2DE2, #4A00E0); }
+    .btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .btn-small { font-size:11px; padding:4px 8px; border-radius:5px; }
+    .table-wrap { overflow-x: auto; border: 1px solid #ccc; border-radius: 8px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; background: white; table-layout: fixed; }
+    th, td { border: 1px solid #444; padding: 4px 3px; text-align: center; vertical-align: middle; word-wrap: break-word; }
+    th { background: #e3eeff; color: #1b3a7a; font-weight: bold; position: sticky; top: 0; z-index: 10; }
+    .row-label { text-align: left; padding-left: 8px; background: #f8fafc; font-weight: 500; }
+    .row-number { font-weight: bold; background: #eef4ff; }
+    .total-row { background: #fff3cd; font-weight: bold; }
+    .input-cell input { width: 100%; box-sizing: border-box; border: none; background: transparent; text-align: center; font-size: 12px; padding: 4px 2px; }
+    .input-cell input:focus { background: #e3f2fd; outline: 2px solid #2196F3; }
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    .archive-section, .aggregate-section { margin-top: 24px; background: #f6fafd; border-radius: 8px; padding: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+    .section-title { font-size: 18px; font-weight: bold; color: #1976d2; margin-bottom: 12px; border-bottom: 2px solid #ddd; padding-bottom: 8px;}
+    .archive-list-wrap { max-height: 150px; overflow-y: auto; border-radius:4px; border:1px solid #c2d1e0; background: #fff; }
+    .archive-list { width: 100%; font-size: 13px; table-layout: auto; }
+    .archive-list tr td { padding: 8px 6px; border-bottom: 1px solid #eee; }
+    .archive-list tr:last-child td { border-bottom: none; }
+    .archive-row-actions { display: flex; gap: 4px; justify-content: flex-end; }
+    .agg-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; }
+    .agg-results-list { max-height: 150px; overflow-y: auto; background: #fff; border-radius: 4px; border:1px solid #c2d1e0; }
+    .agg-checkbox { transform: scale(1.2); margin-right: 8px; }
+    .agg-table-wrap { margin-top: 15px; }
+    /* ADDED: Tăng cỡ chữ của ngày tháng trong bảng kết quả tìm kiếm */
+    .agg-results-list table { font-size: 18px; width: 100%; }
+    .agg-results-list table td { padding: 6px 10px; vertical-align: middle; }
+    .agg-results-list .agg-checkbox { vertical-align: middle; }
+  </style>
+</head>
+<body>
+<a href="dashboard.html" style="display: inline-block; padding: 10px 20px; margin: 20px; font-size: 1rem; font-weight: 700; color: white; background-color: #6c757d; border-radius: 8px; text-decoration: none;">⬅️ Quay lại Dashboard</a>
+
+<div class="container">
+  <div class="header">
+    <h2>THỐNG KÊ SỐ LIỆU ĐTCB CỦA LỰC LƯỢNG</h2>
+  </div>
+  <div class="date-row">
+    <label for="date">Ngày báo cáo:</label>
+    <input type="date" id="date" required>
+  </div>
+  <div class="table-wrap" id="main-table-wrap">
+    <table id="main-table">
+        <colgroup>
+            <col style="width: 3%;">
+            <col style="width: 15%;">
+            <col span="21" style="width: 3.9%;">
+        </colgroup>
+      <thead>
+        <tr>
+          <th rowspan="3">TT</th>
+          <th rowspan="3" style="min-width:170px">Loại đối tượng ĐTCB</th>
+          <th rowspan="3">Tổng số đối tượng phải ĐTCB</th>
+          <th rowspan="3">Ngoài biên giới, lãnh thổ VN</th>
+          <th rowspan="3">Số đối tượng lập, đăng ký mới</th>
+          <th rowspan="3">Số đối tượng, kết thúc, nộp lưu</th>
+          <th colspan="5">Số đối tượng đang ĐTCB</th>
+          <th colspan="5">BỐ TRÍ LLBM, "VAI ẢO"</th>
+          <th colspan="3">VỤ, VIỆC CÓ LIÊN QUAN ĐẾN ANQG PHÁT HIỆN QUA ĐTCB</th>
+          <th colspan="4">NHỮNG NGƯỜI CÓ LIÊN QUAN ĐẾN ANQG PHÁT HIỆN QUA ĐTCB</th>
+        </tr>
+        <tr>
+          <th rowspan="2">Tổng số</th>
+          <th rowspan="2">Đã đăng ký hồ sơ</th>
+          <th rowspan="2">Chưa đăng ký HS</th>
+          <th rowspan="2">Phương án phản gián</th>
+          <th rowspan="2">Kế hoạch An ninh</th>
+          <th rowspan="2">Đặc tình</th>
+          <th rowspan="2">CTV</th>
+          <th rowspan="2">CSBM</th>
+          <th rowspan="2">Vai nghiệp vụ</th>
+          <th rowspan="2">Vai LLBM</th>
+          <th rowspan="2">Xử lý xác minh, tin ban đầu</th>
+          <th rowspan="2">Truy xét</th>
+          <th rowspan="2">Khác</th>
+          <th rowspan="2">Đối tượng chuyên án</th>
+          <th rowspan="2">ĐT KTNV</th>
+          <th rowspan="2">ĐT QLNV</th>
+          <th rowspan="2">ĐT chính trị khác</th>
+        </tr>
+        <tr></tr>
+        <tr style="font-size: 10px; background: #f0f0f0;">
+          <td></td><td></td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td>
+          <td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td>
+          <td>18</td><td>19</td><td>20</td><td>21</td><td>22</td><td>23</td>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+      <tfoot id="table-foot"></tfoot>
+    </table>
+  </div>
+  <div class="actions">
+    <button class="btn btn-save" onclick="saveData()"><span>💾</span> Lưu</button>
+    <button class="btn btn-reset" onclick="resetForm()"><span>🗑️</span> Làm mới</button>
+    <button class="btn btn-export" onclick="exportMainWord()"><span>📄</span> Xuất Word</button>
+  </div>
+  <div class="archive-section">
+    <div class="section-title">Dữ liệu đã lưu trữ</div>
+    <div class="archive-list-wrap">
+      <table class="archive-list" id="archive-list"></table>
+    </div>
+  </div>
+  <div class="aggregate-section">
+    <div class="section-title">Tổng hợp số liệu</div>
+    <div class="agg-search-row">
+      <label>Từ ngày:</label>
+      <input type="date" id="agg-date-from">
+      <label>Đến ngày:</label>
+      <input type="date" id="agg-date-to">
+      <button class="btn btn-view" onclick="searchByDateRange()">Tìm kiếm</button>
+    </div>
+    <div class="agg-results-list" id="agg-results"></div>
+    <div style="text-align: center; margin-top: 10px;">
+        <button class="btn btn-aggregate" onclick="aggregateSelected()">Tổng hợp các mục đã chọn</button>
+    </div>
+    <div class="agg-table-wrap" id="agg-table-wrap"></div>
+  </div>
+</div>
+<script>
+const STORAGE_PREFIX = 'dtcb_v3_'; // Changed prefix for new data format
+const NUM_COLS = 23;
+const rowsConfig = [
+  ["1", "Địa bàn", true],
+  ["1.1", "Xã, phường, thị trấn (hoặc đơn vị hành chính tương đương đối tuyến biên giới)"],
+  ["1.2", "Khu vực trọng yếu về QP-AN"],
+  ["1.3", "KSX – KD – DV"],
+  ["2", "Mục tiêu", true],
+  ["3", "Tuyến", true],
+  ["4", "Lĩnh vực", true],
+  ["5", "Chuyên đề", true],
+  ["6", "Tổ chức", true],
+  ["6.1", "Cơ quan – trường học"],
+  ["6.2", "Diễn đàn hội, nhóm trên KGM"],
+  ["6.3", "Doanh nghiệp"],
+  ["6.4", "Tổ chức địch"],
+  ["6.5", "Tổ chức khác"]
+];
+
+
+function renderTable() {
+  const tableBody = document.getElementById('table-body');
+  let bodyHtml = '';
+  rowsConfig.forEach((row, index) => {
+    const isBold = row[2] ? 'font-weight: bold; background: #f8fafc;' : '';
+    bodyHtml += `<tr><td class="row-number" style="${isBold}">${row[0]}</td><td class="row-label" style="text-align: left; ${isBold}">${row[1]}</td>`;
+    for (let c = 3; c <= NUM_COLS; c++) {
+      bodyHtml += `<td class="input-cell"><input type="number" min="0" id="cell_${index}_${c}" oninput="calcTotal()" /></td>`;
+    }
+    bodyHtml += '</tr>';
+  });
+  tableBody.innerHTML = bodyHtml;
+  
+  const tableFoot = document.getElementById('table-foot');
+  let footHtml = '<tr class="total-row"><td colspan="2">Tổng cộng</td>';
+  for (let c = 3; c <= NUM_COLS; c++) {
+      footHtml += `<td id="total_${c}"></td>`;
+  }
+  footHtml += '</tr>';
+  tableFoot.innerHTML = footHtml;
+  calcTotal();
+}
+
+function calcTotal() {
+  for (let c = 3; c <= NUM_COLS; c++) {
+    let sum = 0;
+    rowsConfig.forEach((row, r) => {
+      const inp = document.getElementById(`cell_${r}_${c}`);
+      if (inp) sum += parseInt(inp.value || 0);
+    });
+    const totalCell = document.getElementById(`total_${c}`);
+    if (totalCell) totalCell.innerText = sum > 0 ? sum : ''; // Hide zero in total
+  }
+}
+
+function resetForm() {
+    if (confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu đang nhập?')) {
+        document.getElementById('date').valueAsDate = new Date();
+        const inputs = document.querySelectorAll('#main-table .input-cell input');
+        inputs.forEach(input => input.value = '');
+        calcTotal();
+    }
+}
+
+function saveData() {
+  const date = document.getElementById('date').value;
+  if (!date) return alert('Vui lòng nhập ngày báo cáo!');
+  
+  let data = rowsConfig.map((row, r) => {
+    let rowData = [];
+    for (let c = 3; c <= NUM_COLS; c++) {
+      // CHANGED: Save empty string instead of "0"
+      rowData.push(document.getElementById(`cell_${r}_${c}`).value || "");
+    }
+    return rowData;
+  });
+  
+  localStorage.setItem(STORAGE_PREFIX + date, JSON.stringify(data));
+  alert('Đã lưu dữ liệu cho ngày ' + formatDate(date));
+  updateArchiveList();
+}
+
+function loadData(date) {
+  let data = localStorage.getItem(STORAGE_PREFIX + date);
+  if (!data) {
+    alert('Không tìm thấy dữ liệu cho ngày này!');
+    return;
+  }
+  
+  data = JSON.parse(data);
+  document.getElementById('date').value = date;
+  
+  data.forEach((rowData, r) => {
+    rowData.forEach((cellValue, c_idx) => {
+      document.getElementById(`cell_${r}_${c_idx + 3}`).value = cellValue;
+    });
+  });
+  
+  calcTotal();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteData(date) {
+  if (confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn dữ liệu của ngày ${formatDate(date)}?`)) {
+    localStorage.removeItem(STORAGE_PREFIX + date);
+    alert('Đã xóa thành công.');
+    updateArchiveList();
+    if (document.getElementById('date').value === date) {
+        const inputs = document.querySelectorAll('#main-table .input-cell input');
+        inputs.forEach(input => input.value = '');
+        calcTotal();
+    }
+    searchByDateRange();
+  }
+}
+
+function updateArchiveList() {
+    const listContainer = document.getElementById('archive-list');
+    let savedDates = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith(STORAGE_PREFIX)) {
+            savedDates.push(key.replace(STORAGE_PREFIX, ''));
+        }
+    }
+    savedDates.sort((a, b) => b.localeCompare(a));
+
+    if (savedDates.length === 0) {
+        listContainer.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#888; padding: 10px;">Chưa có dữ liệu nào.</td></tr>';
+        return;
+    }
+
+    let html = savedDates.map(date => `
+        <tr>
+            <td>${formatDate(date)}</td>
+            <td>
+                <div class="archive-row-actions">
+                    <button class="btn btn-view btn-small" onclick="loadData('${date}')" title="Xem lại">👁️</button>
+                    <button class="btn btn-reset btn-small" style="background: #e74c3c" onclick="deleteData('${date}')" title="Xóa">🗑️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    listContainer.innerHTML = html;
+}
+
+function formatDate(d) {
+  if (!d || !d.includes('-')) return d;
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function generateWordHtml(tableHtml, title, subTitle) {
+    let css = `@page WordSection1 { size: 1190.55pt 841.95pt; mso-page-orientation: landscape; margin:0.8in; } div.WordSection1 { page: WordSection1; } table { border-collapse: collapse; width:100%; font-size:10pt; font-family:'Times New Roman', Times, serif; } th, td { border:1px solid #000; padding:3px 2px; text-align:center; vertical-align:middle; } th { font-weight:bold; } .row-label { text-align:left!important; padding-left:5px!important; } .total-row td, .row-number { font-weight:bold; }`;
+    let signature = `<br/><br/><table style="border:none; width:100%; font-size:12pt; font-family:'Times New Roman', Times, serif; font-weight:bold;"><tr><td style="border:none; width:50%; text-align:center;">LÃNH ĐẠO PHÊ DUYỆT</td><td style="border:none; width:50%; text-align:center;">CÁN BỘ THỐNG KÊ</td></tr></table>`;
+    let header = `<div style="text-align:center; font-size:14pt; font-family:'Times New Roman', Times, serif;"><p style="font-weight:bold; margin:0;">${title}</p><p style="font-size:12pt; margin:0;">${subTitle}</p></div><br/>`;
+    return `<html><head><meta charset="utf-8"><style>${css}</style></head><body><div class="WordSection1">${header}${tableHtml}${signature}</div></body></html>`;
+}
+
+function exportMainWord() {
+    const tableClone = document.getElementById('main-table').cloneNode(true);
+    tableClone.querySelectorAll('input').forEach(input => {
+        const parent = input.parentElement;
+        // CHANGED: Hide zero values
+        const value = input.value;
+        parent.innerText = value === '0' ? '' : value;
+    });
+    // CHANGED: Hide zeros in total row
+    tableClone.querySelectorAll('tfoot td').forEach(td => {
+        if(td.innerText === '0') td.innerText = '';
+    });
+    const date = document.getElementById('date').value;
+    const title = 'THỐNG KÊ SỐ LIỆU ĐTCB CỦA LỰC LƯỢNG';
+    const subTitle = `(Ngày ${formatDate(date) || '.../.../...'})`;
+    const html = generateWordHtml(tableClone.outerHTML, title, subTitle);
+    saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), `DTCB_${date || 'Moi'}.doc`);
+}
+
+function searchByDateRange() {
+  const fromDate = document.getElementById('agg-date-from').value;
+  const toDate = document.getElementById('agg-date-to').value;
+  const resultsContainer = document.getElementById('agg-results');
+  document.getElementById('agg-table-wrap').innerHTML = '';
+  if (!fromDate || !toDate) return;
+  if (fromDate > toDate) return alert('Ngày bắt đầu không được lớn hơn ngày kết thúc!');
+  let foundDates = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith(STORAGE_PREFIX)) {
+      const date = key.replace(STORAGE_PREFIX, '');
+      if (date >= fromDate && date <= toDate) foundDates.push(date);
+    }
+  }
+  foundDates.sort((a, b) => b.localeCompare(a));
+  if (foundDates.length === 0) {
+    resultsContainer.innerHTML = `<div style="text-align:center; padding:10px; color:#888;">Không có dữ liệu trong khoảng thời gian đã chọn.</div>`;
+    return;
+  }
+  let html = '<form id="agg-form"><table>';
+  html += foundDates.map(date => `<tr><td style="width:40px;"><input class="agg-checkbox" type="checkbox" name="agg" value="${date}" checked></td><td>${formatDate(date)}</td></tr>`).join('');
+  html += '</table></form>';
+  resultsContainer.innerHTML = html;
+}
+
+function aggregateSelected() {
+  const form = document.getElementById('agg-form');
+  if (!form) return alert('Vui lòng "Tìm kiếm" và chọn các báo cáo cần tổng hợp!');
+  const checkedDates = Array.from(form.elements['agg']).filter(e => e.checked).map(e => e.value);
+  if (checkedDates.length === 0) return alert('Vui lòng chọn ít nhất 1 báo cáo để tổng hợp!');
+  
+  const aggregatedData = Array(rowsConfig.length).fill(0).map(() => Array(NUM_COLS - 2).fill(0));
+  checkedDates.forEach(date => {
+    let data = JSON.parse(localStorage.getItem(STORAGE_PREFIX + date) || '[]');
+    data.forEach((rowData, r) => {
+      rowData.forEach((cellValue, c) => {
+        aggregatedData[r][c] += parseInt(cellValue || 0);
+      });
+    });
+  });
+
+  const mainTable = document.getElementById('main-table');
+  const tableClone = mainTable.cloneNode(true);
+  tableClone.id = 'aggregated-table';
+  tableClone.querySelectorAll('input').forEach(input => input.remove()); // Remove input boxes
+
+  const bodyRows = tableClone.querySelectorAll('tbody tr');
+  aggregatedData.forEach((rowData, r) => {
+    rowData.forEach((cellValue, c) => {
+        // CHANGED: Hide zero values in aggregated table display
+        bodyRows[r].children[c + 2].innerText = cellValue > 0 ? cellValue : '';
+    });
+  });
+
+  const footerCells = tableClone.querySelectorAll('tfoot td');
+  for (let c = 0; c < NUM_COLS - 2; c++) {
+      let colSum = 0;
+      for (let r = 0; r < rowsConfig.length; r++) {
+          colSum += aggregatedData[r][c];
+      }
+      // CHANGED: Hide zero values in aggregated total row display
+      footerCells[c + 1].innerText = colSum > 0 ? colSum : '';
+  }
+  
+  const exportButton = `<div style="text-align:right; margin-top:10px;"><button class="btn btn-export" onclick="exportAggWord()"><span>📄</span> Xuất Word Bảng Tổng Hợp</button></div>`;
+  document.getElementById('agg-table-wrap').innerHTML = tableClone.outerHTML + exportButton;
+}
+
+function exportAggWord() {
+  const table = document.getElementById('aggregated-table');
+  if (!table) return alert('Không có bảng tổng hợp để xuất!');
+
+  const fromDate = document.getElementById('agg-date-from').value;
+  const toDate = document.getElementById('agg-date-to').value;
+  const title = 'BẢNG TỔNG HỢP SỐ LIỆU ĐTCB';
+  const subTitle = `(Từ ngày ${formatDate(fromDate)} đến ${formatDate(toDate)})`;
+  // The table already has zeros hidden, so we can export it directly
+  const html = generateWordHtml(table.outerHTML, title, subTitle);
+  const fileName = `TongHop_DTCB_${fromDate}_den_${toDate}.doc`;
+  saveAs(new Blob(['\ufeff', html], { type: 'application/msword' }), fileName);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    renderTable();
+    updateArchiveList();
+    document.getElementById('date').valueAsDate = new Date();
+});
+</script>
+</body>
+</html>
