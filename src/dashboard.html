@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Hệ Thống Quản Lý</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #eef2f5; color: #333; font-family: 'Roboto', sans-serif; }
+    #dashboard-container { display: flex; flex-direction: column; align-items: center; width: 100%; min-height: 100vh; }
+    
+    header { background: linear-gradient(to right, #1d62f0, #1e90ff); width: 100%; padding: 1.5rem 1rem; color: white; }
+    header h1 { font-size: 1.7rem; text-align: center; margin-bottom: 1.5rem; }
+    
+    .controls-wrapper { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+    .btn-group, .single-day-manager, .report-generator {
+        background: rgba(255,255,255,0.1); padding: 0.75rem 1rem; border-radius: 10px;
+        display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .btn { padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 500; border: none; border-radius: 6px; cursor: pointer; color: white; transition: background 0.3s ease; text-decoration: none; }
+    .btn-export { background: #0cc15d; }
+    .btn-import { background: #5f6ef8; }
+    .single-day-manager input[type="date"], .report-generator input[type="date"] { padding: 6px; border-radius: 5px; border: 1px solid #ccc; font-size: 0.9rem; }
+    .single-day-manager label, .report-generator label { font-weight: 500; font-size: 0.9rem; }
+    .btn-report { background: #ff9800; }
+    
+    main { max-width: 1300px; width: 100%; display: flex; justify-content: center; flex-grow: 1; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; padding: 2.5rem 2rem; width: 100%; }
+    .card { padding: 2.5rem 1.5rem; text-align: center; font-weight: 700; color: white; border-radius: 16px; font-size: 1.4rem; transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; min-height: 140px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-decoration: none; }
+    .card:hover { transform: translateY(-8px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+    .color-1 { background-color: #3f51b5; } .color-2 { background-color: #009688; } .color-3 { background-color: #e91e63; }
+    .color-4 { background-color: #9c27b0; } .color-6 { background-color: #f44336; }
+    
+    footer { width: 100%; text-align: center; padding: 1.5rem; color: #777; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+<a href="index.html" class="btn" style="position: absolute; top: 15px; left: 15px; background-color: rgba(0,0,0,0.2); padding: 8px 15px; font-size: 0.9rem;">⬅️ Quay lại</a>
+  <div id="dashboard-container">
+    <header>
+      <h1>HỆ THỐNG QUẢN LÝ SỐ LIỆU NVCB</h1>
+      <div class="controls-wrapper">
+          <div class="btn-group">
+            <button class="btn btn-export" onclick="exportBackupData()">📥 Xuất Toàn Bộ</button>
+            <button class="btn btn-import" onclick="document.getElementById('import-file-backup').click()">📤 Nhập Sao Lưu</button>
+            <input type="file" id="import-file-backup" style="display: none;" accept=".json" onchange="importBackupData(event)">
+          </div>
+          <div class="single-day-manager">
+            <label for="single-day-date">Chọn ngày:</label>
+            <input type="date" id="single-day-date">
+            <button class="btn btn-export" style="background-color: #00bcd4;" onclick="exportSingleDayData()">📝 Xuất Dữ Liệu Ngày</button>
+            <button class="btn btn-import" style="background-color: #8bc34a;" onclick="document.getElementById('import-file-single-day').click()">📥 Nhập Dữ Liệu Ngày</button>
+            <input type="file" id="import-file-single-day" style="display: none;" accept=".json" onchange="importSingleDayData(event)">
+          </div>
+          <div class="report-generator">
+            <label for="report-start-date">Từ ngày:</label> <input type="date" id="report-start-date">
+            <label for="report-end-date">Đến ngày:</label> <input type="date" id="report-end-date">
+            <button class="btn btn-report" onclick="exportAggregatedReport()">📊 Xuất Báo Cáo</button>
+            <button class="btn btn-import" onclick="document.getElementById('import-file-report').click()">📤 Nhập Báo Cáo</button>
+            <input type="file" id="import-file-report" style="display: none;" accept=".json" onchange="importAggregatedReport(event)">
+          </div>
+      </div>
+    </header>
+    <main>
+        <div class="grid">
+            <a href="hoinhom.html" class="card color-1">THỐNG KÊ<br>SỐ LIỆU HỘI, NHÓM VÀ VAI OO</a>
+            <a href="dtcb.html" class="card color-2">THỐNG KÊ<br>SỐ LIỆU ĐTCB</a>
+            <a href="nat.html" class="card color-3">THỐNG KÊ<br>NAT VÀ HTBM</a>
+            <a href="ctv.html" class="card color-4">THỐNG KÊ<br>SỐ LIỆU CTV</a>
+            <a href="csbm.html" class="card color-6">THỐNG KÊ<br>SỐ LIỆU CSBM</a>
+            <a href="thongketonghop.html" class="card color-1">THỐNG KÊ<br>TỔNG HỢP</a>
+        </div>
+    </main>
+    <footer><p>Tác giả: Dương Văn Khương</p></footer>
+  </div>
+
+<script>
+// === KHAI BÁO CÁC TIỀN TỐ (PREFIX) CHO TỪNG MODULE ===
+const ALL_MODULE_PREFIXES = [
+    'hoinhom_', 
+    'dtcb_',    
+    'nat_',     
+    'ctv_',     
+    'csbm_',    
+    'tonghop_'  
+];
+
+// === CÁC HÀM XỬ LÝ DỮ LIỆU ===
+
+/**
+ * HÀM CỘT LÕI: Hợp nhất dữ liệu mới vào dữ liệu cũ bằng cách cộng dồn.
+ * Được sử dụng bởi 'Nhập Dữ Liệu Ngày' và 'Nhập Báo Cáo'.
+ */
+function mergeDataForKey(key, importedRows) {
+    const existingDataJSON = localStorage.getItem(key);
+    if (!existingDataJSON) {
+        localStorage.setItem(key, JSON.stringify(importedRows));
+        return;
+    }
+    const existingRows = JSON.parse(existingDataJSON);
+    const combinedData = new Map();
+    for (const row of existingRows) {
+        const unitName = row[0] || row[12];
+        if (unitName) combinedData.set(unitName, row);
+    }
+    for (const row of importedRows) {
+        const unitName = row[0] || row[12];
+        if (!unitName) continue;
+        if (combinedData.has(unitName)) {
+            const existingRow = combinedData.get(unitName);
+            const newRow = [...existingRow];
+            for(let i = 1; i < row.length; i++) {
+                if (key.startsWith('tonghop_') && i === 12) continue;
+                newRow[i] = (parseFloat(existingRow[i]) || 0) + (parseFloat(row[i]) || 0);
+            }
+            combinedData.set(unitName, newRow);
+        } else {
+            combinedData.set(unitName, row);
+        }
+    }
+    const finalMergedRows = Array.from(combinedData.values());
+    localStorage.setItem(key, JSON.stringify(finalMergedRows));
+}
+
+/**
+ * Chức năng: Xuất toàn bộ dữ liệu của tất cả các module ra file backup.
+ */
+function exportBackupData() {
+    const allData = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (ALL_MODULE_PREFIXES.some(prefix => key.startsWith(prefix))) {
+            try { allData[key] = JSON.parse(localStorage.getItem(key)); } catch(e) { /* Bỏ qua lỗi */ }
+        }
+    }
+    if (Object.keys(allData).length === 0) { return alert('Không có dữ liệu để xuất!'); }
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[-T:]/g, "");
+    saveAs(blob, `NVCB_Backup_ToanBo_${timestamp}.json`);
+    alert('Đã xuất toàn bộ dữ liệu thành công!');
+}
+
+/**
+ * Chức năng: Nhập file backup. Sẽ XÓA SẠCH dữ liệu cũ và GHI ĐÈ bằng dữ liệu mới.
+ */
+function importBackupData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const dataFromFile = JSON.parse(e.target.result);
+            if (dataFromFile.reportInfo) { throw new Error("File không hợp lệ! Đây là file Báo cáo."); }
+            if (!confirm(`CẢNH BÁO: Thao tác này sẽ XÓA SẠCH dữ liệu cũ và GHI ĐÈ bằng dữ liệu từ file "${file.name}".\n\nHành động này không thể hoàn tác. Bạn có chắc muốn tiếp tục?`)) {
+                return;
+            }
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (ALL_MODULE_PREFIXES.some(prefix => key.startsWith(prefix))) { localStorage.removeItem(key); }
+            }
+            for (const key in dataFromFile) {
+                if (Object.prototype.hasOwnProperty.call(dataFromFile, key) && ALL_MODULE_PREFIXES.some(p => key.startsWith(p))) {
+                    localStorage.setItem(key, JSON.stringify(dataFromFile[key]));
+                }
+            }
+            alert('Khôi phục dữ liệu từ file sao lưu thành công!');
+        } catch (error) {
+            alert('Lỗi: ' + error.message);
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
+/**
+ * Chức năng: Xuất dữ liệu của tất cả module cho một ngày duy nhất.
+ */
+function exportSingleDayData() {
+    const dateValue = document.getElementById('single-day-date').value;
+    if (!dateValue) { return alert('Vui lòng chọn một ngày cụ thể để xuất.'); }
+    const dayData = {};
+    let dataFound = false;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const prefix = ALL_MODULE_PREFIXES.find(p => key.startsWith(p));
+        if (prefix && key.substring(prefix.length) === dateValue) {
+            try { dayData[key] = JSON.parse(localStorage.getItem(key)); dataFound = true; } catch (e) { /* Bỏ qua */ }
+        }
+    }
+    if (!dataFound) { return alert('Không tìm thấy dữ liệu nào cho ngày đã chọn.'); }
+    const blob = new Blob([JSON.stringify(dayData, null, 2)], { type: 'application/json' });
+    saveAs(blob, `NVCB_Ngay_${dateValue}.json`);
+    alert(`Đã xuất thành công dữ liệu cho ngày ${dateValue}.`);
+}
+
+/**
+ * === HÀM ĐƯỢC BỔ SUNG ĐỂ SỬA LỖI ===
+ * Chức năng: Nhập file dữ liệu của một ngày. Sẽ CỘNG DỒN dữ liệu.
+ */
+function importSingleDayData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const dataFromFile = JSON.parse(e.target.result);
+            if (dataFromFile.reportInfo) { throw new Error("File không hợp lệ! Đây là file Báo cáo. Vui lòng dùng chức năng 'Nhập Báo Cáo'."); }
+            if (!confirm(`Bạn có chắc muốn nhập và cộng dồn dữ liệu từ file báo cáo ngày "${file.name}"?`)) {
+                return;
+            }
+            for (const key in dataFromFile) {
+                if (Object.prototype.hasOwnProperty.call(dataFromFile, key) && ALL_MODULE_PREFIXES.some(p => key.startsWith(p))) {
+                    mergeDataForKey(key, dataFromFile[key]);
+                }
+            }
+            alert('Nhập và cộng dồn dữ liệu từ file báo cáo ngày thành công!');
+        } catch (error) {
+            alert('Lỗi: ' + error.message);
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
+/**
+ * Chức năng: Xuất báo cáo tổng hợp dữ liệu từ nhiều ngày.
+ */
+function exportAggregatedReport() {
+    const startDateString = document.getElementById('report-start-date').value;
+    const endDateString = document.getElementById('report-end-date').value;
+    if (!startDateString || !endDateString) { return alert("Vui lòng chọn cả ngày bắt đầu và ngày kết thúc."); }
+    if (startDateString > endDateString) { return alert("Ngày bắt đầu không được lớn hơn ngày kết thúc."); }
+    
+    const aggregatedData = {};
+    let dataFound = false;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const prefix = ALL_MODULE_PREFIXES.find(p => key.startsWith(p));
+        if (prefix) {
+            const dateStr = key.substring(prefix.length);
+            if (dateStr >= startDateString && dateStr <= endDateString) {
+                dataFound = true;
+                const moduleName = prefix.slice(0, -1);
+                if (!aggregatedData[moduleName]) aggregatedData[moduleName] = new Map();
+                try {
+                    const rows = JSON.parse(localStorage.getItem(key));
+                    for (const row of rows) {
+                        const unitName = row[0] || row[12];
+                        if (!unitName) continue;
+                        if (aggregatedData[moduleName].has(unitName)) {
+                            const existingRow = aggregatedData[moduleName].get(unitName);
+                            const summedRow = [...existingRow];
+                            for(let j = 1; j < row.length; j++) {
+                                if (prefix === 'tonghop_' && j === 12) continue;
+                                summedRow[j] = (parseFloat(existingRow[j]) || 0) + (parseFloat(row[j]) || 0);
+                            }
+                            aggregatedData[moduleName].set(unitName, summedRow);
+                        } else {
+                            aggregatedData[moduleName].set(unitName, row);
+                        }
+                    }
+                } catch(e) { /* Bỏ qua */ }
+            }
+        }
+    }
+    if (!dataFound) { return alert("Không tìm thấy dữ liệu nào trong khoảng ngày đã chọn."); }
+    
+    const finalReport = { reportInfo: { type: "Báo cáo tổng hợp", period: `Từ ${startDateString} đến ${endDateString}` }, data: {} };
+    for(const moduleName in aggregatedData) {
+        finalReport.data[moduleName] = Array.from(aggregatedData[moduleName].values());
+    }
+    const blob = new Blob([JSON.stringify(finalReport, null, 2)], { type: 'application/json' });
+    saveAs(blob, `BaoCaoTongHop_${startDateString}_den_${endDateString}.json`);
+    alert(`Đã xuất báo cáo tổng hợp thành công!`);
+}
+
+/**
+ * Chức năng: Nhập file báo cáo tổng hợp. Sẽ CỘNG DỒN dữ liệu.
+ */
+function importAggregatedReport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const dataFromFile = JSON.parse(e.target.result);
+            if (!dataFromFile.reportInfo || !dataFromFile.data) { throw new Error("File không hợp lệ! Đây không phải là file Báo cáo Tổng hợp."); }
+            if (!confirm(`Bạn có chắc muốn nhập dữ liệu từ Báo cáo Tổng hợp "${file.name}"?`)) {
+                return;
+            }
+            const periodString = dataFromFile.reportInfo.period;
+            const endDate = periodString.split(' ').pop();
+            if (!endDate || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) { throw new Error("Không thể xác định ngày kết thúc từ file báo cáo."); }
+            for (const moduleName in dataFromFile.data) {
+                const prefix = moduleName + '_';
+                if (ALL_MODULE_PREFIXES.includes(prefix)) {
+                    mergeDataForKey(prefix + endDate, dataFromFile.data[moduleName]);
+                }
+            }
+            alert('Nhập và cộng dồn dữ liệu từ Báo cáo Tổng hợp thành công!');
+        } catch (error) {
+            alert('Lỗi: ' + error.message);
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
+</script>
+</body>
+</html>
