@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THỐNG KÊ SỐ LIỆU HỘI, NHÓM TRÊN KHÔNG GIAN MẠNG LIÊN QUAN ANQG VÀ "VAI ẢO"</title>
+    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body { background: #f7fafd; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .container { max-width: 98vw; margin: 18px auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0, 2, 8, 0.08); padding: 24px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h2 { font-size: 22px; color: #1b3a7a; margin-bottom: 12px; text-transform: uppercase; }
+        .date-row { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; }
+        .date-row label { font-size: 16px; font-weight: bold; margin-right: 8px; color: #1b3a7a; }
+        .date-row input[type="date"] { font-size: 16px; padding: 6px 12px; border-radius: 6px; border: 1px solid #aaa; }
+        .actions { display: flex; justify-content: center; gap: 14px; margin: 22px 0 10px 0; flex-wrap: wrap; }
+        .btn { border: none; border-radius: 6px; padding: 10px 20px; font-size: 15px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: 0.18s; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        .btn-add { background: linear-gradient(90deg,#00b09b,#96c93d); }
+        .btn-save { background: linear-gradient(90deg,#43e97b,#38f9d7); }
+        .btn-view { background: linear-gradient(90deg,#2193b0,#6dd5ed); }
+        .btn-reset { background: linear-gradient(90deg,#ff5858,#f09819); }
+        .btn-export { background: linear-gradient(90deg,#84fab0,#8fd3f4); }
+        .btn-small { font-size:11px; padding:4px 8px; border-radius:5px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        /* === CSS TỐI ƯU CHO BẢNG === */
+        .table-container { 
+            overflow-x: hidden; /* Ẩn thanh cuộn ngang */
+            border: 1px solid #ccc;
+        }
+        table { 
+            border-collapse: collapse; 
+            background: white; 
+            width: 100%; /* Bảng rộng 100% container */
+            table-layout: fixed; /* QUAN TRỌNG: Giúp bảng tuân thủ width đã định */
+            font-size: 12px; /* Giảm font chữ để gọn hơn */
+        }
+        th, td { 
+            border: 1px solid #444; 
+            padding: 3px 2px; /* Giảm padding */
+            text-align: center; 
+            vertical-align: middle;
+            word-wrap: break-word; /* Tự động xuống dòng cho nội dung dài */
+        }
+        /* ============================ */
+
+        thead th { background: #e3eeff; color: #1b3a7a; font-weight: bold; }
+        tbody tr:hover { background-color: #eff6ff; }
+        .row-label { text-align: left; padding-left: 8px; background: #f6fafd; }
+        .row-number { font-weight: bold; background: #e7f1ff; }
+        .total-row { background: #fff3cd; font-weight: bold; }
+        .guide-row { font-weight: bold; background: #f0f0f0; font-size: 11px; }
+        .input-cell input { width: 100%; box-sizing: border-box; border: none; background: transparent; text-align: center; font-size: 12px; padding: 3px 2px; }
+        .input-cell input:focus { background: #e3f2fd; outline: 2px solid #2196F3; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .archive-section, .aggregate-section {
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 16px;
+            background: #f6fafd;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .section-title { font-size: 18px; font-weight: bold; color: #1976d2; margin-bottom: 12px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
+        .archive-list-wrap { max-height: 150px; overflow-y: auto; border-radius:4px; border:1px solid #c2d1e0; background: #fff; }
+        .archive-list { width: 100%; font-size: 13px; table-layout: auto; } /* Reset table-layout cho bảng nhỏ */
+        .archive-list tr td { padding: 8px 6px; border-bottom: 1px solid #eee; }
+        .archive-list tr:last-child td { border-bottom: none; }
+        .archive-row-actions { display: flex; gap: 4px; justify-content: flex-end; }
+        .agg-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; justify-content: center; }
+        .agg-search-row input[type="date"] { font-size: 14px; padding: 6px 10px; border-radius: 4px; border: 1px solid #aaa; }
+        
+        .agg-results-list { max-height: 150px; overflow-y: auto; background: #fff; border-radius: 4px; border:1px solid #c2d1e0; font-size:13px; }
+        .agg-checkbox { transform: scale(1.2); margin-right: 8px; }
+        .agg-table-wrap { margin-top: 15px; }
+        .delete-row-btn { background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+<a href="dashboard.html" style="display: inline-block; padding: 10px 20px; margin: 20px; font-size: 1rem; font-weight: 700; color: white; background-color: #6c757d; border-radius: 8px; text-decoration: none;">⬅️ Quay lại Dashboard</a>
+
+<div class="container">
+  
+  <div class="header">
+    <h2>Thống kê số liệu hội nhóm trên KGM liên quan ANQG và "Vai ảo"</h2>
+  </div>
+  <div class="date-row">
+    <label for="date">Ngày báo cáo:</label>
+    <input type="date" id="date" required>
+  </div>
+
+  <div class="table-container">
+    <table id="main-table">
+        <!-- QUAN TRỌNG: Định nghĩa chiều rộng các cột bằng % để bảng tự co giãn -->
+        <colgroup>
+            <col style="width: 2.5%;"> <!-- 1. TT -->
+            <col style="width: 10%;">  <!-- 2. Đơn vị -->
+            <col style="width: 2.5%;"> <!-- 3 -->
+            <col style="width: 2.5%;"> <!-- 4 -->
+            <col style="width: 2.5%;"> <!-- 5 -->
+            <col style="width: 2.5%;"> <!-- 6 -->
+            <col style="width: 2.5%;"> <!-- 7 -->
+            <col style="width: 2.5%;"> <!-- 8 -->
+            <col style="width: 2.5%;"> <!-- 9 -->
+            <col style="width: 2.5%;"> <!-- 10 -->
+            <col style="width: 2.5%;"> <!-- 11 -->
+            <col style="width: 2.5%;"> <!-- 12 -->
+            <col style="width: 4%;">   <!-- 13 -->
+            <col style="width: 2.5%;"> <!-- 14 -->
+            <col style="width: 4%;">   <!-- 15 -->
+            <col style="width: 2.5%;"> <!-- 16 -->
+            <col style="width: 2.5%;"> <!-- 17 -->
+            <col style="width: 2.5%;"> <!-- 18 -->
+            <col style="width: 2.5%;"> <!-- 19 -->
+            <col style="width: 2.5%;"> <!-- 20 -->
+            <col style="width: 2.5%;"> <!-- 21 -->
+            <col style="width: 2.5%;"> <!-- 22 -->
+            <col style="width: 2.5%;"> <!-- 23 -->
+            <col style="width: 2.5%;"> <!-- 24 -->
+            <col style="width: 2.5%;"> <!-- 25 -->
+            <col style="width: 2.5%;"> <!-- 26 -->
+            <col style="width: 2.5%;"> <!-- 27 -->
+            <col style="width: 2.5%;"> <!-- 28 -->
+            <col style="width: 2.5%;"> <!-- 29 -->
+            <col style="width: 2.5%;"> <!-- 30 -->
+            <col style="width: 2.5%;"> <!-- 31 -->
+            <col style="width: 2.5%;"> <!-- 32 -->
+            <col style="width: 2.5%;"> <!-- 33 -->
+            <col style="width: 2.5%;"> <!-- 34 -->
+            <col style="width: 2.5%;"> <!-- 35 -->
+            <col style="width: 2.5%;"> <!-- 36 -->
+            <col style="width: 2.5%;"> <!-- 37 -->
+            <col style="width: 2.5%;"> <!-- 38 -->
+        </colgroup>
+         <thead>
+            <tr>
+                <th rowspan="4">TT</th>
+                <th rowspan="4">Đơn vị</th>
+                <th colspan="17">Hội, nhóm trên không gian mạng liên quan ANQG</th>
+                <th colspan="19">CÔNG TÁC "VAI ẢO"</th>
+            </tr>
+            <tr>
+                <th rowspan="3">Tổng số hội, nhóm cũ</th>
+                <th colspan="2">Phát hiện mới</th>
+                <th colspan="2">Được phân công mới</th>
+                <th rowspan="3">Số hội, nhóm đã bị phá rã, vô hiệu hóa hoặc tự giải tán</th>
+                <th colspan="7">Tổng số hội, nhóm đang chủ trì triển khai công tác AN</th>
+                <th colspan="3">Đối tượng tham gia hội, nhóm đang quản lý, đấu tranh</th>
+                <th rowspan="3">Số nhóm, fanpage tích cực đang quản lý, sử dụng</th>
+                <th rowspan="3">Tổng số Vai ảo cũ</th>
+                <th colspan="2" rowspan="2">Tổng số kết thúc</th>
+                <th colspan="2" rowspan="2">Tổng số xây dựng mới</th>
+                <th colspan="2" rowspan="2">Tổng số đang quản lý, sử dụng</th>
+                <th rowspan="3">Số trinh sát sử dụng "vai nghiệp vụ"</th>
+                <th rowspan="3">Số LLBM sử dụng vai "LLBM"</th>
+                <th rowspan="3">Số "vai ảo" tiếp cận</th>
+                <th rowspan="3">Số "vai ảo" làm quản trị</th>
+                <th colspan="2" rowspan="2">Số "vai ảo" tham gia hội, nhóm kín, bí mật, riêng tư</th>
+                <th colspan="2" rowspan="2">Số "vai ảo" nắm tình hình chung</th>
+                <th colspan="4">Tin " Vai ảo"</th>
+            </tr>
+            <tr>
+                <th rowspan="2">Công khai</th>
+                <th rowspan="2">Kín, bí mật, riêng tư</th>
+                <th rowspan="2">Công khai</th>
+                <th rowspan="2">Kín, bí mật, riêng tư</th>
+                <th rowspan="2">Tổng số hội, nhóm.</th>
+                <th rowspan="2">Công khai</th>
+                <th rowspan="2">Kín, bí mật, riêng tư</th>
+                <th rowspan="2">Hội, nhóm phức tạp</th>
+                <th rowspan="2">Hội, nhóm có lượng thành viên lớn, tiềm ẩn nguy cơ đối với ANQG</th>
+                <th rowspan="2">Hội nhóm đã ĐTCB</th>
+                <th rowspan="2">Hội, nhóm đã xác định, làm rõ đối tượng quản trị</th>
+                <th rowspan="2">CA</th>
+                <th rowspan="2">KTNV</th>
+                <th rowspan="2">QLNV</th>
+                <th colspan="2">Tổng số tin cung cấp</th>
+                <th colspan="2">Tổng số tin xử lý</th>
+            </tr>
+            <tr>
+                <th>VNV</th> <th>VLL</th>
+                <th>VNV</th> <th>VLL</th>
+                <th>VNV</th> <th>VLL</th>
+                <th>VNV</th> <th>VLL</th>
+                <th>VNV</th> <th>VLL</th>
+                <th>VNV</th> <th>VLL</th>
+                <th>VNV</th> <th>VLL</th>
+            </tr>
+            <tr class="guide-row">
+                <td></td><td></td>
+                <td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td>
+                <td>11</td><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td><td>19</td><td>20</td>
+                <td>21</td><td>22</td><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td><td>30</td>
+                <td>31</td><td>32</td><td>33</td><td>34</td><td>35</td><td>36</td><td>37</td><td>38</td>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            </tbody>
+        <tfoot id="table-foot">
+            </tfoot>
+    </table>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-add" onclick="addNewRow()"><span>➕</span> Thêm dòng</button>
+    <button class="btn btn-save" onclick="saveData()"><span>💾</span> Lưu</button>
+    <button class="btn btn-reset" onclick="resetForm()"><span>🗑️</span> Làm mới</button>
+    <button class="btn btn-export" onclick="exportMainWord()"><span>📄</span> Xuất Word</button>
+  </div>
+  
+  <div class="archive-section">
+    <div class="section-title">Dữ liệu đã lưu trữ</div>
+    <div class="archive-list-wrap">
+      <table class="archive-list" id="archive-list"></table>
+    </div>
+  </div>
+  
+  <div class="aggregate-section">
+    <div class="section-title">Tổng hợp số liệu</div>
+    <div class="agg-search-row">
+      <label>Từ ngày:</label>
+      <input type="date" id="agg-date-from">
+      <label>Đến ngày:</label>
+      <input type="date" id="agg-date-to">
+      <button class="btn btn-view" onclick="searchByDateRange()">Tìm kiếm</button>
+    </div>
+    <div class="agg-results-list" id="agg-results"></div>
+    <div style="text-align: center; margin-top: 10px;">
+        <button class="btn btn-save" onclick="aggregateSelected()">Tổng hợp các mục đã chọn</button>
+    </div>
+    <div class="agg-table-wrap" id="agg-table-wrap"></div>
+  </div>
+
+</div>
+
+<script>
+// Toàn bộ mã JavaScript từ phiên bản trước được giữ nguyên vì nó đã ổn định.
+// Các thay đổi chỉ nằm ở phần HTML và CSS để tối ưu giao diện.
+const NUM_COLS = 38;
+const STORAGE_PREFIX = 'hoinhom_'; // Changed prefix to avoid conflicts
+
+// RENDER & CALCULATION
+function renderTable(data = []) {
+    const tableBody = document.getElementById('table-body');
+    tableBody.innerHTML = '';
+    if (data.length === 0) {
+        addNewRow(false);
+    } else {
+        data.forEach(rowData => addNewRow(false, rowData));
+    }
+    renderFooter();
+    calcTotal();
+}
+
+function renderFooter() {
+    const tableFoot = document.getElementById('table-foot');
+    let footHtml = '<tr class="total-row"><td colspan="2">Tổng cộng</td>';
+    for(let c=3; c<=NUM_COLS; c++) {
+        footHtml += `<td id="total_${c}">0</td>`;
+    }
+    footHtml += '</tr>';
+    tableFoot.innerHTML = footHtml;
+}
+
+function addNewRow(recalc = true, rowData = null) {
+    const tableBody = document.getElementById('table-body');
+    const newRow = document.createElement('tr');
+    newRow.className = 'data-row';
+    
+    const rowNum = tableBody.rows.length + 1;
+    let rowHtml = `<td class="row-number">${rowNum} <button class="delete-row-btn" onclick="deleteCurrentRow(this)">X</button></td><td class="input-cell"><input type="text" placeholder="Nhập đơn vị" value="${rowData ? rowData[0] : ''}"></td>`;
+    for(let c=3; c<=NUM_COLS; c++) {
+        const value = rowData ? rowData[c-2] : '';
+        rowHtml += `<td class="input-cell"><input type="number" min="0" oninput="calcTotal()" value="${value}" /></td>`;
+    }
+    newRow.innerHTML = rowHtml;
+    tableBody.appendChild(newRow);
+    if(recalc) calcTotal();
+}
+
+function deleteCurrentRow(button) {
+    if(confirm('Bạn có chắc muốn xóa dòng này?')) {
+        button.closest('tr').remove();
+        updateRowNumbers();
+        calcTotal();
+    }
+}
+
+function updateRowNumbers() {
+    const rows = document.querySelectorAll('#table-body tr.data-row');
+    rows.forEach((row, index) => {
+        const cell = row.querySelector('.row-number');
+        if (cell) {
+            const btn = cell.querySelector('button');
+            cell.innerHTML = `${index + 1} `;
+            cell.appendChild(btn);
+        }
+    });
+}
+
+function calcTotal() {
+    const rows = document.querySelectorAll('#table-body tr.data-row');
+    for(let c=3; c<=NUM_COLS; c++) {
+        let sum = 0;
+        rows.forEach(row => {
+            const input = row.querySelector(`td:nth-child(${c}) input`);
+            if(input) sum += parseInt(input.value || 0);
+        });
+        document.getElementById(`total_${c}`).innerText = sum;
+    }
+}
+
+function resetForm(ask=true) {
+    if (ask && !confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu đang nhập trên bảng?')) return;
+    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+    renderTable([]);
+}
+
+// DATA MANAGEMENT
+function saveData() {
+    const date = document.getElementById('date').value;
+    if(!date) return alert('Vui lòng nhập ngày báo cáo!');
+    let data = [];
+    document.querySelectorAll('#table-body tr.data-row').forEach(row => {
+        let rowData = [];
+        let hasValue = false;
+        row.querySelectorAll('input').forEach(input => {
+            const val = input.value || '';
+            rowData.push(val);
+            if (val) hasValue = true;
+        });
+        if (hasValue) {
+            data.push(rowData);
+        }
+    });
+    localStorage.setItem(STORAGE_PREFIX + date, JSON.stringify(data));
+    alert('Đã lưu dữ liệu cho ngày '+formatDate(date));
+    updateArchiveList();
+}
+
+function loadData(date) {
+    date = date || document.getElementById('date').value;
+    if(!date) return alert('Vui lòng chọn ngày để xem dữ liệu!');
+    let data = localStorage.getItem(STORAGE_PREFIX + date);
+    if(!data) {
+        resetForm(false);
+        return;
+    }
+    document.getElementById('date').value = date;
+    renderTable(JSON.parse(data));
+}
+
+function updateArchiveList() {
+    const tbl = document.getElementById('archive-list');
+    let arr = [];
+    for(let i=0; i<localStorage.length; i++) {
+        let k = localStorage.key(i);
+        if(k.startsWith(STORAGE_PREFIX)) arr.push(k.replace(STORAGE_PREFIX,''));
+    }
+    arr.sort((a,b)=>b.localeCompare(a));
+    
+    let html = (arr.length > 0) ? '' : '<div style="color:#888;padding:4px;text-align:center;">Chưa có dữ liệu nào.</div>';
+    if (arr.length > 0) {
+        arr.forEach(d => {
+            html += `<tr>
+                <td>${formatDate(d)}</td>
+                <td>
+                    <div class="archive-row-actions">
+                        <button class="btn btn-view btn-small" onclick="loadData('${d}')">👁️</button>
+                        <button class="btn btn-reset btn-small" style="background: #c0392b" onclick="deleteData('${d}')">🗑️</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    }
+    tbl.innerHTML = html;
+}
+
+function deleteData(date) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn báo cáo ngày ${formatDate(date)}?`)) return;
+    localStorage.removeItem(STORAGE_PREFIX + date);
+    updateArchiveList();
+    if (document.getElementById('date').value === date) {
+        resetForm(false);
+    }
+    alert('Đã xóa báo cáo.');
+}
+
+function formatDate(d) {
+    if(!d) return '';
+    const [y,m,day] = d.split('-');
+    return `${day}/${m}/${y}`;
+}
+
+// WORD EXPORT & AGGREGATION
+function prepareTableForExport(originalTable) {
+    const tableClone = originalTable.cloneNode(true);
+    tableClone.querySelectorAll('input').forEach(input => {
+        input.parentElement.innerText = input.value || '0';
+    });
+    tableClone.querySelectorAll('.delete-row-btn').forEach(btn => btn.remove());
+    return tableClone;
+}
+
+function generateWordHtml(tableContent, title, subTitle) {
+    let css = `@page WordSection1 { size: 1190.55pt 841.95pt; mso-page-orientation: landscape; margin:0.5in; } div.WordSection1 { page: WordSection1; } table { border-collapse: collapse; width:100%; font-size:9pt; table-layout: fixed; } th,td { border:1px solid #000; padding:2px; text-align:center; vertical-align:middle; word-wrap: break-word; } h1, h2 { text-align:center; font-family:'Times New Roman', Times, serif; margin: 5px 0; } h1 {font-size: 14pt; font-weight:bold;} h2 {font-size: 12pt;}
+    th, .total-row, .guide-row, .row-number { background-color: #ffffff !important; color: #000000 !important; font-weight: bold; }`;
+    
+    const signatureHtml = `
+    <table style="width:100%; border:none; margin-top:40px; font-size:12pt; font-weight:bold; font-family:'Times New Roman', Times, serif;">
+        <tr>
+            <td style="width:50%; text-align:center; border:none;">LÃNH ĐẠO PHÊ DUYỆT</td>
+            <td style="width:50%; text-align:center; border:none;">CÁN BỘ THỐNG KÊ</td>
+        </tr>
+    </table>`;
+
+    let html = `<html><head><meta charset="utf-8"><style>${css}</style></head><body><div class="WordSection1"><h1>${title}</h1><h2>${subTitle}</h2>${tableContent}${signatureHtml}</div></body></html>`;
+    return html;
+}
+
+function exportMainWord() {
+    const tableForExport = prepareTableForExport(document.getElementById('main-table'));
+    const date = document.getElementById('date').value;
+    const title = 'THỐNG KÊ SỐ LIỆU HỘI NHÓM TRÊN KGM';
+    const subTitle = date ? `(Ngày ${formatDate(date)})` : '';
+    const htmlContent = generateWordHtml(tableForExport.outerHTML, title, subTitle);
+    saveAs(new Blob(['\ufeff', htmlContent], {type: 'application/msword'}), `ThongKe_${date || 'Moi'}.doc`);
+}
+
+function searchByDateRange() {
+    document.getElementById('agg-table-wrap').innerHTML = '';
+    const fromDate = document.getElementById('agg-date-from').value;
+    const toDate = document.getElementById('agg-date-to').value;
+
+    if (!fromDate || !toDate) {
+        return alert('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc!');
+    }
+    if (fromDate > toDate) {
+        return alert('Ngày bắt đầu không được lớn hơn ngày kết thúc!');
+    }
+    let arr = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if (key.startsWith(STORAGE_PREFIX)) {
+            let reportDate = key.replace(STORAGE_PREFIX, '');
+            if (reportDate >= fromDate && reportDate <= toDate) {
+                arr.push(reportDate);
+            }
+        }
+    }
+    arr.sort((a, b) => b.localeCompare(a));
+    let html = (arr.length > 0) ? '<form id="agg-form"><table style="width:100%; table-layout: auto;">' : `<div style="color:#888;padding:4px; text-align:center;">Không có dữ liệu từ ${formatDate(fromDate)} đến ${formatDate(toDate)}.</div>`;
+    if (arr.length > 0) {
+        arr.forEach(d => {
+            html += `<tr><td><input class="agg-checkbox" type="checkbox" name="agg" value="${d}"></td><td>${formatDate(d)}</td></tr>`;
+        });
+        html += '</table></form>';
+    }
+    document.getElementById('agg-results').innerHTML = html;
+}
+
+function aggregateSelected() {
+    const form = document.getElementById('agg-form');
+    if(!form) return alert('Vui lòng tìm kiếm theo ngày trước!');
+    const checked = Array.from(form.elements['agg']).filter(e=>e.checked).map(e=>e.value);
+    if(checked.length===0) return alert('Vui lòng chọn ít nhất 1 báo cáo để tổng hợp!');
+    
+    const mergedData = new Map();
+
+    checked.forEach(date => {
+        let data = JSON.parse(localStorage.getItem(STORAGE_PREFIX + date) || '[]');
+        data.forEach(rowData => {
+            const unitName = rowData[0].trim();
+            if (!unitName) return;
+
+            const numericalData = rowData.slice(1).map(val => parseInt(val || 0));
+
+            if (mergedData.has(unitName)) {
+                const existingData = mergedData.get(unitName);
+                for (let i = 0; i < numericalData.length; i++) {
+                    existingData[i] += numericalData[i];
+                }
+            } else {
+                mergedData.set(unitName, numericalData);
+            }
+        });
+    });
+
+    let aggData = [];
+    mergedData.forEach((values, unitName) => {
+        aggData.push([unitName, ...values]);
+    });
+    
+    aggData.sort((a, b) => a[0].localeCompare(b[0]));
+
+    const aggTable = document.getElementById('main-table').cloneNode(true);
+    aggTable.id = 'agg-table';
+    const aggBody = aggTable.querySelector('tbody');
+    aggBody.innerHTML = '';
+    
+    aggData.forEach((rowData, index) => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td class="row-number">${index + 1}</td><td>${rowData[0]}</td>`; 
+        for(let c = 1; c < rowData.length; c++) {
+            tr.innerHTML += `<td>${rowData[c] || '0'}</td>`;
+        }
+        aggBody.appendChild(tr);
+    });
+    
+    const aggFoot = aggTable.querySelector('tfoot');
+    let totals = Array(NUM_COLS - 1).fill(0);
+    
+    aggData.forEach(rowData => {
+        for (let c = 1; c < rowData.length; c++) {
+            totals[c-1] += parseInt(rowData[c] || 0);
+        }
+    });
+
+    aggFoot.innerHTML = `<tr class="total-row"><td colspan="2">Tổng cộng</td>${totals.map(t => `<td>${t}</td>`).join('')}</tr>`;
+
+    const exportButtonHtml = `<div style="margin-top: 15px; text-align: center;"><button class="btn btn-export" onclick="exportAggregatedWord()"><span>📄</span> Xuất Word Tổng Hợp</button></div>`;
+    
+    document.getElementById('agg-table-wrap').innerHTML = `<h4 style="color: #1976d2; text-align: center;">Kết quả tổng hợp từ ${checked.length} báo cáo</h4>${aggTable.outerHTML}${exportButtonHtml}`;
+}
+
+function exportAggregatedWord() {
+    const table = document.getElementById('agg-table');
+    if (!table) return alert('Không có dữ liệu tổng hợp để xuất!');
+    
+    const tableForExport = prepareTableForExport(table);
+    const fromDate = document.getElementById('agg-date-from').value;
+    const toDate = document.getElementById('agg-date-to').value;
+    const title = 'THỐNG KÊ TỔNG HỢP SỐ LIỆU HỘI NHÓM TRÊN KGM';
+    const subTitle = (fromDate && toDate) ? `(Từ ngày ${formatDate(fromDate)} đến ${formatDate(toDate)})` : '(Tổng hợp)';
+    const htmlContent = generateWordHtml(tableForExport.outerHTML, title, subTitle);
+    const fileName = `TongHop_HoiNhom_${fromDate}_${toDate}.doc`;
+    saveAs(new Blob(['\ufeff', htmlContent], {type: 'application/msword'}), fileName);
+}
+
+// --- INITIAL LOAD ---
+document.addEventListener('DOMContentLoaded', function() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('date').value = today;
+  renderTable([]);
+  updateArchiveList();
+});
+</script>
+</body>
+</html>
